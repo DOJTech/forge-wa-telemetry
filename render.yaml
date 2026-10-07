@@ -1,0 +1,44 @@
+services:
+  # 1. Frontend (static site, served from ./public)
+  - type: web
+    name: forge-telemetry-ui
+    runtime: static
+    buildCommand: echo "no build step"
+    staticPublishPath: ./public
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://forge-telemetry-api.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'none'"
+
+  # 2. Backend API (Node, from ./api)
+  - type: web
+    name: forge-telemetry-api
+    runtime: node
+    plan: free
+    rootDir: ./api
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGIN
+        value: https://forge-telemetry-ui.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: forge-telemetry-db
+          property: connectionString
+
+databases:
+  # 3. PostgreSQL audit log
+  - name: forge-telemetry-db
+    plan: free
